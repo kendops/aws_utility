@@ -1,0 +1,350 @@
+
+# ---------------------- VPC ----------------------
+apiVersion: ec2.aws.upbound.io/v1beta1
+kind: VPC
+metadata:
+  name: dev-vpc
+spec:
+  forProvider:
+    region: us-east-2
+    cidrBlock: 10.100.0.0/16
+    enableDnsSupport: true
+    enableDnsHostnames: true
+    tags:
+      ManagedBy: Crossplane
+      Name: dev-vpc
+  providerConfigRef:
+    name: default
+
+# ---------------------- Internet Gateway ----------------------
+---
+apiVersion: ec2.aws.upbound.io/v1beta1
+kind: InternetGateway
+metadata:
+  name: dev-igw
+spec:
+  forProvider:
+    region: us-east-2
+    tags:
+      Name: dev-igw
+      ManagedBy: Crossplane
+    vpcIdRef:
+      name: dev-vpc
+  providerConfigRef:
+    name: default
+
+# ---------------------- Elastic IP ----------------------
+---
+apiVersion: ec2.aws.upbound.io/v1beta1
+kind: EIP
+metadata:
+  name: dev-nat
+spec:
+  forProvider:
+    region: us-east-2
+    tags:
+      Name: dev-nat
+  providerConfigRef:
+    name: default
+
+# ---------------------- Public & Private Subnets ----------------------
+---
+apiVersion: ec2.aws.upbound.io/v1beta1
+kind: Subnet
+metadata:
+  name: dev-public-us-east-2a
+  labels:
+    name: dev-public-us-east-2a
+spec:
+  forProvider:
+    availabilityZone: us-east-2a
+    cidrBlock: 10.100.3.0/24
+    region: us-east-2
+    vpcIdRef:
+      name: dev-vpc
+    mapPublicIpOnLaunch: true
+    tags:
+      Name: dev-public-us-east-2a
+      ManagedBy: Crossplane
+  providerConfigRef:
+    name: default
+---
+apiVersion: ec2.aws.upbound.io/v1beta1
+kind: Subnet
+metadata:
+  name: dev-public-us-east-2b
+  labels:
+    name: dev-public-us-east-2b
+spec:
+  forProvider:
+    availabilityZone: us-east-2b
+    cidrBlock: 10.100.4.0/24
+    region: us-east-2
+    vpcIdRef:
+      name: dev-vpc
+    mapPublicIpOnLaunch: true
+    tags:
+      Name: dev-public-us-east-2b
+      ManagedBy: Crossplane
+  providerConfigRef:
+    name: default
+---
+apiVersion: ec2.aws.upbound.io/v1beta1
+kind: Subnet
+metadata:
+  name: dev-private-us-east-2a
+  labels:
+    name: dev-private-us-east-2a
+spec:
+  forProvider:
+    availabilityZone: us-east-2a
+    cidrBlock: 10.100.1.0/24
+    region: us-east-2
+    vpcIdRef:
+      name: dev-vpc
+    tags:
+      Name: dev-private-us-east-2a
+      ManagedBy: Crossplane
+  providerConfigRef:
+    name: default
+---
+apiVersion: ec2.aws.upbound.io/v1beta1
+kind: Subnet
+metadata:
+  name: dev-private-us-east-2b
+  labels:
+    name: dev-private-us-east-2b
+spec:
+  forProvider:
+    availabilityZone: us-east-2b
+    cidrBlock: 10.100.2.0/24
+    region: us-east-2
+    vpcIdRef:
+      name: dev-vpc
+    tags:
+      Name: dev-private-us-east-2b
+      ManagedBy: Crossplane
+  providerConfigRef:
+    name: default
+
+# ---------------------- NAT Gateway ----------------------
+---
+apiVersion: ec2.aws.upbound.io/v1beta1
+kind: NATGateway
+metadata:
+  name: dev-nat
+spec:
+  forProvider:
+    region: us-east-2
+    connectivityType: public
+    allocationIdRef:
+      name: dev-nat
+    subnetIdRef:
+      name: dev-public-us-east-2a
+    tags:
+      Name: dev-nat
+  providerConfigRef:
+    name: default
+
+# ---------------------- Route Tables ----------------------
+---
+apiVersion: ec2.aws.upbound.io/v1beta1
+kind: RouteTable
+metadata:
+  name: dev-private
+spec:
+  forProvider:
+    region: us-east-2
+    vpcIdRef:
+      name: dev-vpc
+    tags:
+      Name: dev-private
+  providerConfigRef:
+    name: default
+---
+apiVersion: ec2.aws.upbound.io/v1beta1
+kind: RouteTable
+metadata:
+  name: dev-public
+spec:
+  forProvider:
+    region: us-east-2
+    vpcIdRef:
+      name: dev-vpc
+    tags:
+      Name: dev-public
+  providerConfigRef:
+    name: default
+
+# ---------------------- Routes ----------------------
+---
+apiVersion: ec2.aws.upbound.io/v1beta1
+kind: Route
+metadata:
+  name: dev-private
+spec:
+  forProvider:
+    region: us-east-2
+    destinationCidrBlock: 0.0.0.0/0
+    natGatewayIdRef:
+      name: dev-nat
+    routeTableIdRef:
+      name: dev-private
+  providerConfigRef:
+    name: default
+---
+apiVersion: ec2.aws.upbound.io/v1beta1
+kind: Route
+metadata:
+  name: dev-public
+spec:
+  forProvider:
+    region: us-east-2
+    destinationCidrBlock: 0.0.0.0/0
+    gatewayIdRef:
+      name: dev-igw
+    routeTableIdRef:
+      name: dev-public
+  providerConfigRef:
+    name: default
+
+# ---------------------- Route Table Associations ----------------------
+---
+apiVersion: ec2.aws.upbound.io/v1beta1
+kind: RouteTableAssociation
+metadata:
+  name: dev-public-us-east-2a
+spec:
+  forProvider:
+    region: us-east-2
+    routeTableIdRef:
+      name: dev-public
+    subnetIdRef:
+      name: dev-public-us-east-2a
+  providerConfigRef:
+    name: default
+---
+apiVersion: ec2.aws.upbound.io/v1beta1
+kind: RouteTableAssociation
+metadata:
+  name: dev-public-us-east-2b
+spec:
+  forProvider:
+    region: us-east-2
+    routeTableIdRef:
+      name: dev-public
+    subnetIdRef:
+      name: dev-public-us-east-2b
+  providerConfigRef:
+    name: default
+---
+apiVersion: ec2.aws.upbound.io/v1beta1
+kind: RouteTableAssociation
+metadata:
+  name: dev-private-us-east-2a
+spec:
+  forProvider:
+    region: us-east-2
+    routeTableIdRef:
+      name: dev-private
+    subnetIdRef:
+      name: dev-private-us-east-2a
+  providerConfigRef:
+    name: default
+---
+apiVersion: ec2.aws.upbound.io/v1beta1
+kind: RouteTableAssociation
+metadata:
+  name: dev-private-us-east-2b
+spec:
+  forProvider:
+    region: us-east-2
+    routeTableIdRef:
+      name: dev-private
+    subnetIdRef:
+      name: dev-private-us-east-2b
+  providerConfigRef:
+    name: default
+
+# ---------------------- Security Group & Rules ----------------------
+---
+apiVersion: ec2.aws.upbound.io/v1beta1
+kind: SecurityGroup
+metadata:
+  name: crossplane-sg
+spec:
+  forProvider:
+    name: allow_rules
+    description: Allow all TCP
+    region: us-east-2
+    vpcIdRef:
+      name: dev-vpc
+    tags:
+      Name: allow_rules
+      ManagedBy: Crossplane
+  providerConfigRef:
+    name: default
+---
+apiVersion: ec2.aws.upbound.io/v1beta1
+kind: SecurityGroupRule
+metadata:
+  name: crossplane-sg
+spec:
+  forProvider:
+    region: us-east-2
+    type: ingress
+    fromPort: 0
+    toPort: 65535
+    protocol: tcp
+    cidrBlocks:
+      - 0.0.0.0/0
+    securityGroupIdRef:
+      name: crossplane-sg
+  providerConfigRef:
+    name: default
+
+# ---------------------- EC2 Instance Crossplane Node 1----------------------
+---
+apiVersion: ec2.aws.upbound.io/v1beta1
+kind: Instance
+metadata:
+  name: crossplane-instance
+spec:
+  forProvider:
+    region: us-east-2
+    ami: ami-0a3c3a20c09d6f377
+    instanceType: t2.micro
+    keyName: crossplane-key
+    subnetIdRef:
+      name: dev-public-us-east-2a
+    associatePublicIpAddress: true
+    vpcSecurityGroupIdRefs:
+      - name: crossplane-sg
+    tags:
+      ManagedBy: Crossplane
+      Name: dev-crossplane-node-1
+  providerConfigRef:
+    name: default
+
+# ---------------------- EC2 Instance Crossplane Node 2----------------------
+---
+apiVersion: ec2.aws.upbound.io/v1beta1
+kind: Instance
+metadata:
+  name: crossplane-instance
+spec:
+  forProvider:
+    region: us-east-2
+    ami: ami-0a3c3a20c09d6f377
+    instanceType: t2.micro
+    keyName: crossplane-key
+    subnetIdRef:
+      name: dev-public-us-east-2a
+    associatePublicIpAddress: true
+    vpcSecurityGroupIdRefs:
+      - name: crossplane-sg
+    tags:
+      ManagedBy: Crossplane
+      Name: dev-crossplane-node-2
+  providerConfigRef:
+    name: default

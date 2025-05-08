@@ -1,0 +1,79 @@
+# ---------------- 1. IAM Policy ----------------
+apiVersion: iam.aws.upbound.io/v1beta1
+kind: Policy
+metadata:
+  name: gitlab-runner-policy
+spec:
+  forProvider:
+    name: gitlab-runner-policy
+    path: "/"
+    policy: |
+      {
+        "Version": "2012-10-17",
+        "Statement": [
+          {
+            "Effect": "Allow",
+            "Action": [
+              "ec2:*",
+              "s3:*",
+              "eks:*",
+              "iam:PassRole",
+              "cloudformation:*"
+            ],
+            "Resource": "*"
+          }
+        ]
+      }
+  providerConfigRef:
+    name: default
+---
+# ---------------- 2. IAM Role (with EC2 trust policy) ----------------
+apiVersion: iam.aws.upbound.io/v1beta1
+kind: Role
+metadata:
+  name: gitlab-runner-role
+spec:
+  forProvider:
+    name: gitlab-runner-role
+    assumeRolePolicyDocument: |
+      {
+        "Version": "2012-10-17",
+        "Statement": [
+          {
+            "Effect": "Allow",
+            "Principal": {
+              "Service": "ec2.amazonaws.com"
+            },
+            "Action": "sts:AssumeRole"
+          }
+        ]
+      }
+  providerConfigRef:
+    name: default
+---
+# ---------------- 3. IAM Instance Profile ----------------
+apiVersion: iam.aws.upbound.io/v1beta1
+kind: InstanceProfile
+metadata:
+  name: gitlab-runner-profile
+spec:
+  forProvider:
+    name: gitlab-runner-profile
+    roles:
+      - gitlab-runner-role
+  providerConfigRef:
+    name: default
+---
+# ---------------- 4. Attach IAM Policy to Role ----------------
+apiVersion: iam.aws.upbound.io/v1beta1
+kind: RolePolicyAttachment
+metadata:
+  name: gitlab-runner-role-attachment
+spec:
+  forProvider:
+    roleNameRef:
+      name: gitlab-runner-role
+    policyArnRef:
+      name: gitlab-runner-policy
+  providerConfigRef:
+    name: default

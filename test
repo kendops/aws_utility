@@ -1,1 +1,38 @@
+## ✅ Step-by-Step: Attach Instance Profile to EC2
+
+
+
+✅ Step-by-Step: Attach Instance Profile to EC2
+
+🔹 1. Create IAM Role and Instance Profile (if not already done)
+aws iam create-role \
+  --role-name gitlab-runner-role \
+  --assume-role-policy-document file://trust-policy.json
+
+aws iam create-instance-profile \
+  --instance-profile-name gitlab-runner-profile
+
+aws iam add-role-to-instance-profile \
+  --instance-profile-name gitlab-runner-profile \
+  --role-name gitlab-runner-role
+🔹 2. Wait for the instance profile to propagate
+Instance profiles take a few seconds to be attachable.
+
+You can check with:
+
+aws iam get-instance-profile --instance-profile-name gitlab-runner-profile
+🔹 3. Associate the Instance Profile to a Running EC2 Instance
+aws ec2 associate-iam-instance-profile \
+  --instance-id i-0abc1234def567890 \
+  --iam-instance-profile Name=gitlab-runner-profile
+Replace i-0abc1234def567890 with your actual instance ID.
+
+✅ Confirm It Worked
+aws ec2 describe-instances \
+  --instance-ids i-0abc1234def567890 \
+  --query "Reservations[].Instances[].IamInstanceProfile"
+
+
+
+
 test
